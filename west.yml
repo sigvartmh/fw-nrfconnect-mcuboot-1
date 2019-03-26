@@ -1,0 +1,35 @@
+west:
+  url: https://github.com/zephyrproject-rtos/west
+  revision: master
+
+manifest:
+  defaults:
+    remote: mcuboot
+
+  remotes:
+    # Nordic Semiconductor SDKs Base URL
+  - name: ncs
+    url-base: https://github.com/NordicPlayground
+
+    # Zephyr Project Base URL
+  - name: zephyr-rtos
+    url-base: https://github.com/zephyrproject-rtos
+
+    # MCUBoot Project Base URL
+  - name: mcuboot
+    url-base: https://github.com/JuulLabs-OSS
+
+  projects:
+  - name: zephyr
+    remote: zephyr-rtos
+    path: zephyr
+    west-commands: scripts/west-commands.yml
+    revision: master
+
+  - name: nrfxlib
+    remote: ncs
+    path: nrfxlib
+    revision: d98b59bdff2b533f5afb7bdad229eaeb4a931882
+
+  self:
+    path: mcuboot
