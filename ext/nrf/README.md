@@ -2,7 +2,17 @@
 
 ## Pre-prerequisites
 
-Clone [nrfxlib](https://github.com/NordicPlayground/nrfxlib) next to the mcuboot root folder. So that it's located `../nrfxlib` from mcuboots root folder.
+Install west from the zephyrproject requires Python 3
+```
+pip install --user west
+```
+
+Go outside the root folder and call
+
+```
+west init -l mcuboot
+west update
+```
 
 ## Building
 
