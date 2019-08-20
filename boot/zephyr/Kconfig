@@ -218,6 +218,13 @@ config ZEPHYR_TRY_MASS_ERASE
 
 	  This is not available for all targets.
 
+config UPDATABLE_IMAGE_NUMBER
+	int "Number of upgradable images with MCUBoot"
+	default 1
+	help
+	  Increasing this will allow MCUBoot to support multi-image updates
+	  where it can update more than just the application.
+
 module = MCUBOOT
 module-str = MCUBoot bootloader
 source "subsys/logging/Kconfig.template.log_config"
