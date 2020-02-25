@@ -6,7 +6,7 @@
  */
 
 #include <zephyr.h>
-#include <flash.h>
+#include <drivers/flash.h>
 
 #include "target.h"
 
@@ -27,6 +27,13 @@ MCUBOOT_LOG_MODULE_DECLARE(mcuboot);
 #error "FLASH_DEVICE_ID could not be determined"
 #endif
 
+#if (CONFIG_NORDIC_QSPI_NOR - 0) || defined(DT_INST_0_NORDIC_QSPI_NOR_LABEL)
+#define FLASH_DEVICE_EXTERNAL_ID QSPI_FLASH_0_ID
+#define FLASH_DEVICE_BASE_EXTERNAL DT_INST_0_NORDIC_QSPI_NOR_BASE_ADDRESS 
+#define FLASH_DEVICE_EXTERNAL_LABEL DT_INST_0_NORDIC_QSPI_NOR_LABEL
+#define FLASH_NAME "JEDEC QSPI-NOR"
+#endif
+
 #define FLASH_DEVICE_BASE CONFIG_FLASH_BASE_ADDRESS
 static struct device *flash_dev;
 
@@ -40,7 +47,11 @@ struct device *flash_device_get_binding(char *dev_name)
 
 int flash_device_base(uint8_t fd_id, uintptr_t *ret)
 {
-    if (fd_id != FLASH_DEVICE_ID) {
+    if (fd_id != FLASH_DEVICE_ID
+#if defined(DT_JEDEC_SPI_NOR_0_LABEL)
+	|| fd_id != FLASH_DEVICE_EXTERNAL_ID
+#endif
+	) {
         BOOT_LOG_ERR("invalid flash ID %d; expected %d",
                      fd_id, FLASH_DEVICE_ID);
         return -EINVAL;
