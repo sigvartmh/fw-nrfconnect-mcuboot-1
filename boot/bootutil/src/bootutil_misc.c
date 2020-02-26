@@ -250,7 +250,7 @@ boot_read_swap_state(const struct flash_area *fap,
 {
     uint32_t magic[BOOT_MAGIC_ARR_SZ];
     uint32_t off;
-    uint8_t swap_info;
+    uint8_t read_buffer[BOOT_MIN_READ_SIZE];
     int rc;
 
     off = boot_magic_off(fap);
@@ -265,14 +265,14 @@ boot_read_swap_state(const struct flash_area *fap,
     }
 
     off = boot_swap_info_off(fap);
-    rc = flash_area_read_is_empty(fap, off, &swap_info, sizeof swap_info);
+    rc = flash_area_read_is_empty(fap, off, &read_buffer, sizeof read_buffer);
     if (rc < 0) {
         return BOOT_EFLASH;
     }
 
     /* Extract the swap type and image number */
-    state->swap_type = BOOT_GET_SWAP_TYPE(swap_info);
-    state->image_num = BOOT_GET_IMAGE_NUM(swap_info);
+    state->swap_type = BOOT_GET_SWAP_TYPE(read_buffer[0]);
+    state->image_num = BOOT_GET_IMAGE_NUM(read_buffer[0]);
 
     if (rc == 1 || state->swap_type > BOOT_SWAP_TYPE_REVERT) {
         state->swap_type = BOOT_SWAP_TYPE_NONE;
@@ -280,8 +280,9 @@ boot_read_swap_state(const struct flash_area *fap,
     }
 
     off = boot_copy_done_off(fap);
-    rc = flash_area_read_is_empty(fap, off, &state->copy_done,
-            sizeof state->copy_done);
+    rc = flash_area_read_is_empty(fap, off, read_buffer,
+            sizeof read_buffer);
+    state->copy_done = read_buffer[0];
     if (rc < 0) {
         return BOOT_EFLASH;
     }
@@ -292,8 +293,9 @@ boot_read_swap_state(const struct flash_area *fap,
     }
 
     off = boot_image_ok_off(fap);
-    rc = flash_area_read_is_empty(fap, off, &state->image_ok,
-                                  sizeof state->image_ok);
+    rc = flash_area_read_is_empty(fap, off, read_buffer,
+                                  sizeof read_buffer);
+    state->image_ok = read_buffer[0];
     if (rc < 0) {
         return BOOT_EFLASH;
     }
@@ -441,11 +443,13 @@ boot_write_magic(const struct flash_area *fap)
     int rc;
 
     off = boot_magic_off(fap);
+    u8_t magic[BOOT_MAGIC_SZ];
+    memcpy(magic, boot_img_magic, BOOT_MAGIC_SZ);
 
     BOOT_LOG_DBG("writing magic; fa_id=%d off=0x%lx (0x%lx)",
                  fap->fa_id, (unsigned long)off,
                  (unsigned long)(fap->fa_off + off));
-    rc = flash_area_write(fap, off, boot_img_magic, BOOT_MAGIC_SZ);
+    rc = flash_area_write(fap, off, magic, BOOT_MAGIC_SZ);
     if (rc != 0) {
         return BOOT_EFLASH;
     }
@@ -477,7 +481,9 @@ boot_write_trailer(const struct flash_area *fap, uint32_t off,
     }
     memcpy(buf, inbuf, inlen);
     memset(&buf[inlen], erased_val, align - inlen);
-
+    if(align < BOOT_MIN_WRITE_SIZE) {
+	    align = BOOT_MIN_WRITE_SIZE;
+    }
     rc = flash_area_write(fap, off, buf, align);
     if (rc != 0) {
         return BOOT_EFLASH;

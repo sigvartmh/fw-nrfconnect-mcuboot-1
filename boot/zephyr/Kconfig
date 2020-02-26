@@ -210,6 +210,24 @@ config BOOT_MAX_IMG_SECTORS
 	  memory usage; larger values allow it to support larger images.
 	  If unsure, leave at the default value.
 
+config BOOT_MIN_READ_SIZE
+	int "Minimum number of bytes read supported by your flash driver"
+	default 4 
+	help
+	  This option controls the maximum number of sectors that each of
+	  the two image areas can contain. Smaller values reduce MCUboot's
+	  memory usage; larger values allow it to support larger images.
+	  If unsure, leave at the default value.
+
+config BOOT_MIN_WRITE_SIZE
+	int "Minimum number of bytes writte supported by your flash driver"
+	default 4 
+	help
+	  This option controls the maximum number of sectors that each of
+	  the two image areas can contain. Smaller values reduce MCUboot's
+	  memory usage; larger values allow it to support larger images.
+	  If unsure, leave at the default value.
+
 config BOOT_ERASE_PROGRESSIVELY
 	bool "Erase flash progressively when receiving new firmware"
 	default y if SOC_NRF52840 || SOC_NRF9160

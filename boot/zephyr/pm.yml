@@ -15,10 +15,15 @@ mcuboot_primary:
   span: [mcuboot_pad, mcuboot_primary_app]
 
 mcuboot_secondary:
-  share_size: [mcuboot_primary]
-  placement:
-    align: {start: DT_FLASH_ERASE_BLOCK_SIZE}
-    after: mcuboot_primary
+    #ifdef CONFIG_BOARD_NRF52840_PCA10056
+    region: external_flash
+    size: CONFIG_PM_EXTERNAL_FLASH_SIZE
+    #else
+    share_size: [mcuboot_primary]
+    placement:
+      align: {start: DT_FLASH_ERASE_BLOCK_SIZE}
+      after: mcuboot_primary
+      #endif
 
 #ifndef CONFIG_BOOT_SWAP_USING_MOVE
 mcuboot_scratch:

@@ -163,6 +163,8 @@ struct boot_swap_state {
 _Static_assert(BOOT_IMAGE_NUMBER > 0, "Invalid value for BOOT_IMAGE_NUMBER");
 
 #define BOOT_MAX_IMG_SECTORS       MCUBOOT_MAX_IMG_SECTORS
+#define BOOT_MIN_READ_SIZE	   MCUBOOT_MIN_READ_SIZE
+#define BOOT_MIN_WRITE_SIZE	   MCUBOOT_MIN_WRITE_SIZE
 
 /*
  * Extract the swap type and image number from image trailers's swap_info
