@@ -651,8 +651,7 @@ boot_validated_swap_type(struct boot_loader_state *state,
      */
     const struct flash_area *secondary_fa =
 	    BOOT_IMG_AREA(state, BOOT_SECONDARY_SLOT);
-    struct image_header *hdr =
-	    (struct image_header *)secondary_fa->fa_off;
+    struct image_header *hdr = (struct image_header *)secondary_fa->fa_off;
 
     if (hdr->ih_magic == IMAGE_MAGIC) {
 	    const struct flash_area *primary_fa;
@@ -677,18 +676,33 @@ boot_validated_swap_type(struct boot_loader_state *state,
     }
 #endif
 
+#define CMD_ADDR 0x20000000
     swap_type = boot_swap_type_multi(BOOT_CURR_IMG(state));
     if (BOOT_IS_UPGRADE(swap_type)) {
         /* Boot loader wants to switch to the secondary slot.
          * Ensure image is valid.
          */
         rc = boot_validate_slot(state, BOOT_SECONDARY_SLOT, bs);
+	/* Check for network update type */
         if (rc == 1) {
             swap_type = BOOT_SWAP_TYPE_NONE;
         } else if (rc != 0) {
             swap_type = BOOT_SWAP_TYPE_FAIL;
         }
+
+	const struct flash_area *secondary_fa =
+		BOOT_IMG_AREA(state, BOOT_SECONDARY_SLOT);
+	struct image_header *hdr = (struct image_header *)secondary_fa->fa_off;
+	uint32_t vtable_addr = (uint32_t)hdr + hdr->ih_hdr_size;
+	uint32_t size = hdr->ih_img_size;
+	printk("Start addr: 0x%x end addr: 0x%x\n", vtable_addr, size);
+
+	rc = do_network_core_update((void *)CMD_ADDR, vtable_addr, size);
+        if (rc != 0) {
+            swap_type = BOOT_SWAP_TYPE_FAIL;
+	}
     }
+
 
     return swap_type;
 }
