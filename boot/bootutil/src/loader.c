@@ -699,6 +699,67 @@ boot_validated_swap_type(struct boot_loader_state *state,
 	    }
     }
 #endif
+//TODO: CONFIG as NRF53
+#if 1 
+    struct image_tlv_iter it;
+    const struct flash_area *secondary_fa =
+	    BOOT_IMG_AREA(state, BOOT_SECONDARY_SLOT);
+    struct image_header *hdr =
+	    (struct image_header *)secondary_fa->fa_off;
+    uintptr_t tlv_off = BOOT_TLV_OFF(hdr);
+    struct image_tlv_info info;
+    bool boot_record_found = false;
+    if (flash_area_read(secondary_fa, tlv_off, &info, sizeof(info))) {
+        rc = BOOT_SWAP_TYPE_NONE;
+    }
+    uintptr_t tlv_end = info.it_tlv_tot;
+    uint32_t offset;
+    uint16_t len;
+    size_t record_len = 0;
+    uint16_t type;
+#define MAX_BOOT_RECORD_SZ 100 
+    uint8_t buf[MAX_BOOT_RECORD_SZ];
+    memset(buf, '\0', 100);
+
+    BOOT_LOG_INF("Iter begin");
+    rc = bootutil_tlv_iter_begin(&it, hdr, secondary_fa, IMAGE_TLV_ANY, false);
+    if (rc) {
+	
+        //TODO: Don't return but log error return BOOT_SWAP_TYPE_NONE;
+    }
+    BOOT_LOG_INF("while true");
+    while (true) {
+        rc = bootutil_tlv_iter_next(&it, &offset, &len, &type);
+
+        if (rc < 0) {
+		//TODO: Don't return but log error return BOOT_SWAP_TYPE_NONE;
+            return BOOT_SWAP_TYPE_FAIL;
+        } else if (rc > 0) {
+            break;
+        }
+
+        if (type == IMAGE_TLV_BOOT_RECORD) {
+		BOOT_LOG_INF("Boot-record found: %d", len);
+		if (len > sizeof(buf)) {
+			return BOOT_SWAP_TYPE_NONE;
+		}
+		rc = flash_area_read(secondary_fa, offset, buf, len);
+		if (rc) {
+			return -1;
+		}
+		size_t elem_count = 5;
+		cbor_string_type_t sw_type[12];
+
+		list_start_decode(buf, buf + MAX_BOOT_RECORD_SZ, NULL, &elem_count, NULL, NULL);
+		BOOT_LOG_INF("Data: %s",  buf);
+
+		record_len = len;
+		boot_record_found = true;
+		//TODO: Find NetCore string in TLV data
+	}
+    }
+
+#endif
 
     swap_type = boot_swap_type_multi(BOOT_CURR_IMG(state));
     if (BOOT_IS_UPGRADE(swap_type)) {
