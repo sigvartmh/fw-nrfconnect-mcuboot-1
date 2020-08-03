@@ -157,6 +157,9 @@ boot_save_boot_status(uint8_t sw_module,
     /* Traverse through the TLV area to find the boot record
      * and image hash TLVs.
      */
+#include<psa_software_component.h>
+
+    psa_software_component_t sw_component;
     while (true) {
         rc = bootutil_tlv_iter_next(&it, &offset, &len, &type);
         if (rc < 0) {
@@ -173,6 +176,7 @@ boot_save_boot_status(uint8_t sw_module,
             if (rc) {
                 return -1;
             }
+	    bool success = cbor_decode_psa_software_component(buf, sizeof(buf), &sw_component, true);
 
             record_len = len;
             boot_record_found = true;

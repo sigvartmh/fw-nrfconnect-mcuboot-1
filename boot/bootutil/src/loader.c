@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <os/os_malloc.h>
+#include "bootutil/cbor_common.h"
+#include "bootutil/cbor_decode.h"
 #include "bootutil/bootutil.h"
 #include "bootutil/image.h"
 #include "bootutil_priv.h"
@@ -44,6 +46,7 @@
 #include "bootutil/bootutil_log.h"
 #include "bootutil/security_cnt.h"
 #include "bootutil/boot_record.h"
+#include "bootutil/boot_record_decode.h"
 
 #ifdef MCUBOOT_ENC_IMAGES
 #include "bootutil/enc_key.h"
@@ -747,11 +750,16 @@ boot_validated_swap_type(struct boot_loader_state *state,
 		if (rc) {
 			return -1;
 		}
-		size_t elem_count = 5;
-		cbor_string_type_t sw_type[12];
+		psa_software_component_t sw_component;
+		bool success = cbor_decode_psa_software_component(buf, sizeof(buf), &sw_component, true);
+		if (success) {
+			BOOT_LOG_INF("Data: %s", 
+	sw_component._psa_software_component_uint1tstr._psa_software_component_uint1tstr.value);
+		} else {
+			BOOT_LOG_INF("Failed to decode data %d", success);
+		}
 
-		list_start_decode(buf, buf + MAX_BOOT_RECORD_SZ, NULL, &elem_count, NULL, NULL);
-		BOOT_LOG_INF("Data: %s",  buf);
+
 
 		record_len = len;
 		boot_record_found = true;
