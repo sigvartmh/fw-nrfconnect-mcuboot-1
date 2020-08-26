@@ -19,6 +19,9 @@ int do_network_core_update(void *src_addr, size_t len)
 	int ret;
 	struct pcd_cmd *cmd;
 
+	/* Retain nRF5340 Network MCU in Secure domain (bus
+	 * accesses by Network MCU will have Secure attribute set).
+	 */
 	nrf_spu_extdomain_set(NRF_SPU, 0, true, false);
 
 	/* Ensure that the network core is turned off */
@@ -51,7 +54,7 @@ int do_network_core_update(void *src_addr, size_t len)
 }
 
 void lock_ipc_ram_with_spu(){
-	nrf_spu_ramregion_set(NRF_SPU,
-			      APP_CORE_SRAM_SIZE/CONFIG_NRF_SPU_RAM_REGION_SIZE,
-			      true, NRF_SPU_MEM_PERM_READ, true);
+	uint32_t region = (PCD_CMD_ADDRESS/CONFIG_NRF_SPU_RAM_REGION_SIZE) + 1;
+	nrf_spu_ramregion_set(NRF_SPU, region, true, NRF_SPU_MEM_PERM_READ,
+			      true);
 }
