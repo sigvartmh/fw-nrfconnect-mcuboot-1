@@ -19,6 +19,8 @@ int do_network_core_update(void *src_addr, size_t len)
 	int ret;
 	struct pcd_cmd *cmd;
 
+	nrf_spu_extdomain_set(NRF_SPU, 0, true, false);
+
 	/* Ensure that the network core is turned off */
 	nrf_reset_network_force_off(NRF_RESET, true);
 
