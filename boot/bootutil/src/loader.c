@@ -666,7 +666,7 @@ static int
 boot_validated_swap_type(struct boot_loader_state *state,
                          struct boot_status *bs)
 {
-    int swap_type;
+    int swap_type = BOOT_SWAP_TYPE_FAIL;
     int rc;
 
 #if defined(PM_S1_ADDRESS) || defined(CONFIG_SOC_SERIES_NRF53X)
@@ -676,9 +676,6 @@ boot_validated_swap_type(struct boot_loader_state *state,
     uint32_t vtable_addr;
     uint32_t *vtable;
     uint32_t reset_addr;
-#endif
-
-#ifdef PM_S1_ADDRESS
     /* Patch needed for NCS. Since image 0 (the app) and image 1 (the other
      * B1 slot S0 or S1) share the same secondary slot, we need to check
      * whether the update candidate in the secondary slot is intended for
@@ -688,10 +685,11 @@ boot_validated_swap_type(struct boot_loader_state *state,
      */
 
     if (hdr->ih_magic == IMAGE_MAGIC) {
-	    const struct flash_area *primary_fa;
 	    vtable_addr = (uint32_t)hdr + hdr->ih_hdr_size;
 	    vtable = (uint32_t *)(vtable_addr);
 	    reset_addr = vtable[1];
+#ifdef PM_S1_ADDRESS
+	    const struct flash_area *primary_fa;
 	    rc = flash_area_open(flash_area_id_from_multi_image_slot(
 					BOOT_CURR_IMG(state),
 					BOOT_PRIMARY_SLOT),
@@ -706,38 +704,38 @@ boot_validated_swap_type(struct boot_loader_state *state,
 		    */
 		    return BOOT_SWAP_TYPE_NONE;
 	    }
+#endif
+#ifdef CONFIG_SOC_SERIES_NRF53X
+	    swap_type = boot_swap_type_multi(BOOT_CURR_IMG(state));
+	    if (BOOT_IS_UPGRADE(swap_type)) {
+		    /* Boot loader wants to switch to the secondary slot.
+		     * Ensure image is valid.
+		     */
+		    rc = boot_validate_slot(state, BOOT_SECONDARY_SLOT, bs);
+		    if (rc == 1) {
+			    swap_type = BOOT_SWAP_TYPE_NONE;
+		    } else if (rc != 0) {
+			    swap_type = BOOT_SWAP_TYPE_FAIL;
+		    }
+
+		    if (reset_addr > PM_CPUNET_B0N_ADDRESS) {
+			    uint32_t fw_size = hdr->ih_img_size;
+
+			    BOOT_LOG_INF("Starting network core update");
+			    rc = do_network_core_update(vtable, fw_size);
+			    if (rc != 0) {
+				    swap_type = BOOT_SWAP_TYPE_FAIL;
+			    } else {
+				    BOOT_LOG_INF("Done updating network core");
+				    rc = swap_erase_trailer_sectors(state,
+								secondary_fa);
+				    swap_type = BOOT_SWAP_TYPE_NONE;
+			    }
+		    }
+	    }
+#endif
     }
 #endif
-
-    swap_type = boot_swap_type_multi(BOOT_CURR_IMG(state));
-    if (BOOT_IS_UPGRADE(swap_type)) {
-        /* Boot loader wants to switch to the secondary slot.
-         * Ensure image is valid.
-         */
-        rc = boot_validate_slot(state, BOOT_SECONDARY_SLOT, bs);
-        if (rc == 1) {
-            swap_type = BOOT_SWAP_TYPE_NONE;
-        } else if (rc != 0) {
-            swap_type = BOOT_SWAP_TYPE_FAIL;
-        }
-
-	vtable_addr = (uint32_t)hdr + hdr->ih_hdr_size;
-	vtable = (uint32_t *)(vtable_addr);
-	reset_addr = vtable[1];
-	if (reset_addr > PM_CPUNET_B0N_ADDRESS) {
-		uint32_t fw_size = hdr->ih_img_size;
-
-		BOOT_LOG_INF("Starting network core update");
-		rc = do_network_core_update(vtable, fw_size);
-		if (rc != 0) {
-			swap_type = BOOT_SWAP_TYPE_FAIL;
-		} else {
-			BOOT_LOG_INF("Done updating network core");
-			BOOT_SWAP_TYPE(state) = swap_type = BOOT_SWAP_TYPE_NONE;
-			rc = swap_erase_trailer_sectors(state, secondary_fa);
-		}
-	}
-    }
 
     return swap_type;
 }
