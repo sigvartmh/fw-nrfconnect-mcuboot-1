@@ -45,7 +45,7 @@
 #include "bootutil/security_cnt.h"
 #include "bootutil/boot_record.h"
 
-#ifdef CONFIG_SOC_SERIES_NRF53X
+#ifdef CONFIG_SOC_NRF5340_CPUAPP
 #include "nrf53_cpunet_ctl.h"
 #endif
 
@@ -669,7 +669,7 @@ boot_validated_swap_type(struct boot_loader_state *state,
     int swap_type = BOOT_SWAP_TYPE_FAIL;
     int rc;
 
-#if defined(PM_S1_ADDRESS) || defined(CONFIG_SOC_SERIES_NRF53X)
+#if defined(PM_S1_ADDRESS) || defined(CONFIG_SOC_NRF5340_CPUAPP)
     const struct flash_area *secondary_fa =
 	    BOOT_IMG_AREA(state, BOOT_SECONDARY_SLOT);
     struct image_header *hdr = (struct image_header *)secondary_fa->fa_off;
@@ -705,7 +705,7 @@ boot_validated_swap_type(struct boot_loader_state *state,
 		    return BOOT_SWAP_TYPE_NONE;
 	    }
 #endif
-#ifdef CONFIG_SOC_SERIES_NRF53X
+#ifdef CONFIG_SOC_NRF5340_CPUAPP 
 	    swap_type = boot_swap_type_multi(BOOT_CURR_IMG(state));
 	    if (BOOT_IS_UPGRADE(swap_type)) {
 		    /* Boot loader wants to switch to the secondary slot.

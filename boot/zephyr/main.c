@@ -108,7 +108,7 @@ static inline bool boot_skip_serial_recovery()
 }
 #endif
 
-#ifdef CONFIG_SOC_SERIES_NRF53X
+#ifdef CONFIG_SOC_NRF5340_CPUAPP
 #include <nrf53_cpunet_ctl.h>
 #endif
 
@@ -429,7 +429,7 @@ void main(void)
             ;
     }
 #endif /* USE_PARTITION_MANAGER && CONFIG_FPROTECT */
-#if defined(CONFIG_SOC_SERIES_NRF53X)
+#if defined(CONFIG_SOC_NRF5340_CPUAPP)
     lock_ipc_ram_with_spu();
 #endif
 
