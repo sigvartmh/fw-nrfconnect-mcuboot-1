@@ -12,49 +12,34 @@
 #include "bootutil/bootutil_log.h"
 MCUBOOT_LOG_MODULE_DECLARE(mcuboot);
 
-static void set_pcd_cmd_struct(void *src_addr, size_t len)
-{
-	struct pcd_cmd *cmd = (struct pcd_cmd *)PCD_CMD_ADDRESS;
-	cmd->magic = PCD_CMD_MAGIC_COPY;
-	cmd->src_addr = src_addr;
-	cmd->len = len;
-	cmd->offset = 0x10800;
-}
-
-static bool is_copying(void)
-{
-	struct pcd_cmd *cmd = (struct pcd_cmd *)PCD_CMD_ADDRESS;
-	if (cmd->magic == PCD_CMD_MAGIC_COPY) {
-		return true;
-	} 
-
-	return false;
-}
-
-static bool successful(void)
-{
-	struct pcd_cmd *cmd = (struct pcd_cmd *)PCD_CMD_ADDRESS;
-	if (cmd->magic != PCD_CMD_MAGIC_DONE) {
-		return false;
-	}
-	return true;
-}
+#define NET_CORE_APP_OFFSET PM_CPUNET_B0N_SIZE
 
 int do_network_core_update(void *src_addr, size_t len)
 {
+	int ret;
+	struct pcd_cmd *cmd;
+
 	/* Ensure that the network core is turned off */
 	nrf_reset_network_force_off(NRF_RESET, true);
-	set_pcd_cmd_struct(src_addr, len);
+
+	BOOT_LOG_INF("Writing cmd to addr: 0x%x", PCD_CMD_ADDRESS);
+	cmd = pcd_cmd_write((void *)PCD_CMD_ADDRESS, src_addr, len,
+			    NET_CORE_APP_OFFSET);
+	if (cmd == NULL) {
+		BOOT_LOG_INF("Error while writing PCD cmd");
+		return -1;
+	}
 
 	nrf_reset_network_force_off(NRF_RESET, false);
 	BOOT_LOG_INF("Turned on network core");
 
-	while (is_copying())
-		;
+	do {
+		ret = pcd_status(cmd);
+	} while(ret == 0);
 
-	if (!successful()) {
+	if (ret < 0) {
 		BOOT_LOG_ERR("Network core update failed");
-		return -1;
+		return ret;
 	}
 
 	nrf_reset_network_force_off(NRF_RESET, true);
