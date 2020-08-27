@@ -666,16 +666,16 @@ static int
 boot_validated_swap_type(struct boot_loader_state *state,
                          struct boot_status *bs)
 {
-    int swap_type = BOOT_SWAP_TYPE_FAIL;
+    int swap_type;
     int rc;
 
 #if defined(PM_S1_ADDRESS) || defined(CONFIG_SOC_NRF5340_CPUAPP)
     const struct flash_area *secondary_fa =
         BOOT_IMG_AREA(state, BOOT_SECONDARY_SLOT);
     struct image_header *hdr = (struct image_header *)secondary_fa->fa_off;
-    uint32_t vtable_addr;
-    uint32_t *vtable;
-    uint32_t reset_addr;
+    uint32_t vtable_addr = 0;
+    uint32_t *vtable = 0;
+    uint32_t reset_addr = 0;
     /* Patch needed for NCS. Since image 0 (the app) and image 1 (the other
      * B1 slot S0 or S1) share the same secondary slot, we need to check
      * whether the update candidate in the secondary slot is intended for
@@ -739,6 +739,7 @@ boot_validated_swap_type(struct boot_loader_state *state,
             }
         }
 #endif /* CONFIG_SOC_NRF5340_CPUAPP */
+    }
 
     return swap_type;
 }
