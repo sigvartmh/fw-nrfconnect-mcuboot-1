@@ -80,8 +80,7 @@ zephyr_library_sources(
   flash_map_extended.c
   os.c
   keys.c
-)
-
+  )
 
 zephyr_library_sources_ifdef(
   CONFIG_SOC_NRF5340_CPUAPP

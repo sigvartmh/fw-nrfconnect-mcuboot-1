@@ -26,7 +26,7 @@ int do_network_core_update(void *src_addr, size_t len);
 /**
  * Lock RAM used to communicate with network bootloader
  */
-void lock_ipc_ram_with_spu();
+void lock_ipc_ram_with_spu(void);
 #ifdef __cplusplus
 }
 #endif
