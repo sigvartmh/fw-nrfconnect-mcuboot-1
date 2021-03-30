@@ -540,39 +540,33 @@ boot_check_header_erased(struct boot_loader_state *state, int slot)
     defined(MCUBOOT_RAM_LOAD) || \
     (defined(MCUBOOT_OVERWRITE_ONLY) && defined(MCUBOOT_DOWNGRADE_PREVENTION))
 /**
- * Compare image version numbers not including the build number
+ * Check if the version of the image is not older than required.
  *
- * @param ver1           Pointer to the first image version to compare.
- * @param ver2           Pointer to the second image version to compare.
+ * @param req         Required minimal image version.
+ * @param ver         Version of the image to be checked.
  *
- * @retval -1           If ver1 is strictly less than ver2.
- * @retval 0            If the image version numbers are equal,
- *                      (not including the build number).
- * @retval 1            If ver1 is strictly greater than ver2.
+ * @return            0 if the version is sufficient, nonzero otherwise.
  */
 static int
-boot_version_cmp(const struct image_version *ver1,
-                 const struct image_version *ver2)
+boot_is_version_sufficient(struct image_version *req,
+                           struct image_version *ver)
 {
-    if (ver1->iv_major > ver2->iv_major) {
-        return 1;
+    if (ver->iv_major > req->iv_major) {
+        return 0;
     }
-    if (ver1->iv_major < ver2->iv_major) {
-        return -1;
+    if (ver->iv_major < req->iv_major) {
+        return BOOT_EBADVERSION;
     }
-    /* The major version numbers are equal, continue comparison. */
-    if (ver1->iv_minor > ver2->iv_minor) {
-        return 1;
+    /* The major version numbers are equal. */
+    if (ver->iv_minor > req->iv_minor) {
+        return 0;
     }
-    if (ver1->iv_minor < ver2->iv_minor) {
-        return -1;
+    if (ver->iv_minor < req->iv_minor) {
+        return BOOT_EBADVERSION;
     }
-    /* The minor version numbers are equal, continue comparison. */
-    if (ver1->iv_revision > ver2->iv_revision) {
-        return 1;
-    }
-    if (ver1->iv_revision < ver2->iv_revision) {
-        return -1;
+    /* The minor version numbers are equal. */
+    if (ver->iv_revision < req->iv_revision) {
+        return BOOT_EBADVERSION;
     }
 
     return 0;
@@ -631,10 +625,10 @@ boot_validate_slot(struct boot_loader_state *state, int slot,
 #if defined(MCUBOOT_OVERWRITE_ONLY) && defined(MCUBOOT_DOWNGRADE_PREVENTION)
     if (slot != BOOT_PRIMARY_SLOT) {
         /* Check if version of secondary slot is sufficient */
-        rc = boot_version_cmp(
-                &boot_img_hdr(state, BOOT_SECONDARY_SLOT)->ih_ver,
-                &boot_img_hdr(state, BOOT_PRIMARY_SLOT)->ih_ver);
-        if (rc < 0 && boot_check_header_erased(state, BOOT_PRIMARY_SLOT)) {
+        rc = boot_is_version_sufficient(
+                &boot_img_hdr(state, BOOT_PRIMARY_SLOT)->ih_ver,
+                &boot_img_hdr(state, BOOT_SECONDARY_SLOT)->ih_ver);
+        if (rc != 0 && boot_check_header_erased(state, BOOT_PRIMARY_SLOT)) {
             BOOT_LOG_ERR("insufficient version in secondary slot");
             flash_area_erase(fap, 0, fap->fa_size);
             /* Image in the secondary slot does not satisfy version requirement.
@@ -1254,8 +1248,8 @@ boot_verify_slot_dependency(struct boot_loader_state *state,
                                           : BOOT_PRIMARY_SLOT;
     dep_version = &state->imgs[dep->image_id][dep_slot].hdr.ih_ver;
 
-    rc = boot_version_cmp(dep_version, &dep->image_min_version);
-    if (rc < 0) {
+    rc = boot_is_version_sufficient(&dep->image_min_version, dep_version);
+    if (rc != 0) {
         /* Dependency not satisfied.
          * Modify the swap type to decrease the version number of the image
          * (which will be located in the primary slot after the boot process),
@@ -1273,9 +1267,6 @@ boot_verify_slot_dependency(struct boot_loader_state *state,
         default:
             break;
         }
-    } else {
-        /* Dependency satisfied. */
-        rc = 0;
     }
 
     return rc;
@@ -1374,7 +1365,7 @@ boot_verify_dependencies(struct boot_loader_state *state)
         if (rc == 0) {
             /* All dependencies've been satisfied, continue with next image. */
             BOOT_CURR_IMG(state)++;
-        } else {
+        } else if (rc == BOOT_EBADVERSION) {
             /* Cannot upgrade due to non-met dependencies, so disable all
              * image upgrades.
              */
@@ -1383,6 +1374,9 @@ boot_verify_dependencies(struct boot_loader_state *state)
                 BOOT_SWAP_TYPE(state) = BOOT_SWAP_TYPE_NONE;
             }
             break;
+        } else {
+            /* Other error happened, images are inconsistent */
+            return rc;
         }
     }
     return rc;
@@ -1824,7 +1818,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
          * are all satisfied and update swap type if necessary.
          */
         rc = boot_verify_dependencies(state);
-        if (rc != 0) {
+        if (rc == BOOT_EBADVERSION) {
             /*
              * It was impossible to upgrade because the expected dependency version
              * was not available. Here we already changed the swap_type so that
