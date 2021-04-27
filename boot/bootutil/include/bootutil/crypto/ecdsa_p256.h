@@ -176,9 +176,14 @@ static inline void bootutil_ecdsa_p256_drop(bootutil_ecdsa_p256_context *ctx)
     (void)ctx;
 }
 
-static inline int bootutil_ecdsa_p256_verify(bootutil_ecdsa_p256_context *ctx, uint8_t *pk, uint8_t *hash, uint8_t *sig)
+static inline int bootutil_ecdsa_p256_verify(bootutil_ecdsa_p256_context *ctx,
+                                             uint8_t *pk, size_t pk_len,
+                                             uint8_t *hash,
+                                             uint8_t *sig, size_t sig_len)
 {
     (void)ctx;
+    (void)pk_len;
+    (void)sig_len;
     return bl_secp256r1_validate(hash, BOOTUTIL_CRYPTO_ECDSA_P256_HASH_SIZE,
                                  pk, sig);
 }
