@@ -20,16 +20,16 @@ extern uint32_t _image_1_primary_slot_id[];
 
 #define FLASH_AREA_IMAGE_PRIMARY(x)            \
         ((x == 0) ?                            \
-           PM_MCUBOOT_PRIMARY_ID :             \
+           PM_MCUBOOT_PRIMARY_0_ID :           \
          (x == 1) ?                            \
-          (uint32_t)_image_1_primary_slot_id : \
+          PM_MCUBOOT_PRIMARY_1_ID: \
            255 )
 
 #define FLASH_AREA_IMAGE_SECONDARY(x) \
         ((x == 0) ?                   \
-            PM_MCUBOOT_SECONDARY_ID:  \
+            PM_MCUBOOT_SECONDARY_0_ID:  \
         (x == 1) ?                    \
-           PM_MCUBOOT_SECONDARY_ID:   \
+           PM_MCUBOOT_SECONDARY_0_ID:   \
            255 )
 #endif
 #define FLASH_AREA_IMAGE_SCRATCH    PM_MCUBOOT_SCRATCH_ID
