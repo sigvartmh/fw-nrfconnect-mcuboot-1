@@ -21,15 +21,21 @@ mcuboot_primary:
 mcuboot_primary_0_app:
   span: [app]
 
+net_app:
+  region: ram_flash
+  size: 0x8600
+
 mcuboot_primary_1_app:
-  size: CONFIG_PM_PARTITION_SIZE_MCUBOOT 
-  placement: {after: start}
-  inside: sram
+  region: ram_flash
+  size: 0x8800
+  span: [net_app]
 
 mcuboot_primary_0:
   span: [mcuboot_pad_0, mcuboot_primary_0_app]
 
 mcuboot_primary_1:
+  region: ram_flash
+  size: 0x9000
   span: [mcuboot_pad_1, mcuboot_primary_1_app]
 #endif
 
@@ -97,8 +103,8 @@ mcuboot_pad_0:
 mcuboot_pad_1:
     # MCUboot pad must be placed before the 'spm' partition if that is present.
     # If 'spm' partition is not present, it must be placed before the 'app'.
+  region: ram_flash 
   size: CONFIG_PM_PARTITION_SIZE_MCUBOOT_PAD
-  region: external_flash
   placement:
     before: [mcuboot_primary_1_app]
 #ifdef CONFIG_FPROTECT
