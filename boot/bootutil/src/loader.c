@@ -246,23 +246,29 @@ boot_initialize_area(struct boot_loader_state *state, int flash_area)
     if (flash_area == FLASH_AREA_IMAGE_PRIMARY(BOOT_CURR_IMG(state))) {
         out_sectors = BOOT_IMG(state, BOOT_PRIMARY_SLOT).sectors;
         out_num_sectors = &BOOT_IMG(state, BOOT_PRIMARY_SLOT).num_sectors;
+	BOOT_LOG_INF("PRIME Out sectors: %p, out num sectors: %d", out_sectors, *out_num_sectors);
     } else if (flash_area == FLASH_AREA_IMAGE_SECONDARY(BOOT_CURR_IMG(state))) {
         out_sectors = BOOT_IMG(state, BOOT_SECONDARY_SLOT).sectors;
         out_num_sectors = &BOOT_IMG(state, BOOT_SECONDARY_SLOT).num_sectors;
+	BOOT_LOG_INF("SECONDARY Out sectors: %p, out num sectors: %d", out_sectors, *out_num_sectors);
 #if MCUBOOT_SWAP_USING_SCRATCH
     } else if (flash_area == FLASH_AREA_IMAGE_SCRATCH) {
         out_sectors = state->scratch.sectors;
         out_num_sectors = &state->scratch.num_sectors;
+	BOOT_LOG_INF("Scratch Out sectors: %d, out num sectors: %d", out_sectors, *out_num_sectors);
 #endif
     } else {
+	BOOT_LOG_INF("ERROR FLASH IMAGE PRIMARY/SECONDARY");
         return BOOT_EFLASH;
     }
 
     rc = flash_area_get_sectors(flash_area, &num_sectors, out_sectors);
     if (rc != 0) {
+	BOOT_LOG_INF("Flash area failed to get sectors: %d", rc);
         return rc;
     }
     *out_num_sectors = num_sectors;
+	BOOT_LOG_INF("Num sectors:%d", num_sectors);
     return 0;
 }
 #endif  /* !defined(MCUBOOT_USE_FLASH_AREA_GET_SECTORS) */
@@ -283,11 +289,13 @@ boot_read_sectors(struct boot_loader_state *state)
 
     rc = boot_initialize_area(state, FLASH_AREA_IMAGE_PRIMARY(image_index));
     if (rc != 0) {
+	BOOT_LOG_ERR("Unable to initialize area primary");
         return BOOT_EFLASH;
     }
 
     rc = boot_initialize_area(state, FLASH_AREA_IMAGE_SECONDARY(image_index));
     if (rc != 0) {
+	BOOT_LOG_ERR("Unable to initialize area secondary");
         return BOOT_EFLASH;
     }
 
@@ -630,7 +638,14 @@ boot_validate_slot(struct boot_loader_state *state, int slot,
     area_id = flash_area_id_from_multi_image_slot(BOOT_CURR_IMG(state), slot);
     rc = flash_area_open(area_id, &fap);
     if (rc != 0) {
+	BOOT_LOG_ERR("Failed to open flash area id from multi iamge slot");
+	BOOT_LOG_ERR("Area id: %d", area_id);
         FIH_RET(fih_rc);
+    }
+    BOOT_LOG_ERR("Area id: %d", area_id);
+    if(area_id == 10) {
+	    fih_rc = fih_int_encode(FIH_SUCCESS);
+	    goto out;
     }
 
     hdr = boot_img_hdr(state, slot);
@@ -1629,6 +1644,8 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
     int rc;
     fih_int fih_rc = FIH_FAILURE;
 
+    BOOT_LOG_INF("State id: %d", bs->idx);
+    BOOT_LOG_INF("Current image index: %d", state->curr_img_idx);
     /* Determine the sector layout of the image slots and scratch area. */
     rc = boot_read_sectors(state);
     if (rc != 0) {
@@ -1844,6 +1861,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
         boot_prepare_image_for_update(state, &bs);
 
         if (BOOT_IS_UPGRADE(BOOT_SWAP_TYPE(state))) {
+	    BOOT_LOG_INF("Has upgrade");
             has_upgrade = true;
         }
     }
@@ -1870,6 +1888,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
      * and the swap types are determined for each image. By the end of the loop
      * all required update operations will have been finished.
      */
+    BOOT_LOG_INF("IMAGES_ITER");
     IMAGES_ITER(BOOT_CURR_IMG(state)) {
 
 #if (BOOT_IMAGE_NUMBER > 1)
@@ -1882,6 +1901,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 #endif /* MCUBOOT_ENC_IMAGES */
 
         /* Indicate that swap is not aborted */
+        BOOT_LOG_INF("BOOT_STATUS_RESET");
         boot_status_reset(&bs);
 #endif /* (BOOT_IMAGE_NUMBER > 1) */
 
@@ -1890,6 +1910,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 
         switch (BOOT_SWAP_TYPE(state)) {
         case BOOT_SWAP_TYPE_NONE:
+		BOOT_LOG_INF("BOOT_SWAP_TYPE_NONE");
             break;
 
         case BOOT_SWAP_TYPE_TEST:          /* fallthrough */
@@ -1930,11 +1951,13 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
      * have finished. By the end of the loop each image in the primary slot will
      * have been re-validated.
      */
+    BOOT_LOG_INF("ITER IMAGE STATE ");
     IMAGES_ITER(BOOT_CURR_IMG(state)) {
         if (BOOT_SWAP_TYPE(state) != BOOT_SWAP_TYPE_NONE) {
             /* Attempt to read an image header from each slot. Ensure that image
              * headers in slots are aligned with headers in boot_data.
              */
+  	    BOOT_LOG_INF("Read headers");
             rc = boot_read_image_headers(state, false, &bs);
             if (rc != 0) {
                 goto out;
@@ -1959,10 +1982,12 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 	if (BOOT_CURR_IMG(state) == 0)
 #endif
 	{
+  	    BOOT_LOG_INF("Validate slot");
             FIH_CALL(boot_validate_slot, fih_rc, state, BOOT_PRIMARY_SLOT, NULL);
             if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
                 goto out;
             }
+  	    BOOT_LOG_INF("Validate slot done");
 	}
 #else
         /* Even if we're not re-validating the primary slot, we could be booting

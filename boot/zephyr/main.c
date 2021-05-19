@@ -468,7 +468,7 @@ void main(void)
     int rc;
     fih_int fih_rc = FIH_FAILURE;
 
-    MCUBOOT_WATCHDOG_FEED();
+    //MCUBOOT_WATCHDOG_FEED();
 
 #if !defined(MCUBOOT_DIRECT_XIP)
     BOOT_LOG_INF("Starting bootloader");
