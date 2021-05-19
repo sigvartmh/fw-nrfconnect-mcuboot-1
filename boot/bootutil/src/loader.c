@@ -643,10 +643,6 @@ boot_validate_slot(struct boot_loader_state *state, int slot,
         FIH_RET(fih_rc);
     }
     BOOT_LOG_ERR("Area id: %d", area_id);
-    if(area_id == 10) {
-	    fih_rc = fih_int_encode(FIH_SUCCESS);
-	    goto out;
-    }
 
     hdr = boot_img_hdr(state, slot);
     if (boot_check_header_erased(state, slot) == 0 ||
@@ -1984,9 +1980,11 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 	{
   	    BOOT_LOG_INF("Validate slot");
             FIH_CALL(boot_validate_slot, fih_rc, state, BOOT_PRIMARY_SLOT, NULL);
+	    if ((BOOT_CURR_IMG(state) == 0)){
             if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
                 goto out;
             }
+	    }
   	    BOOT_LOG_INF("Validate slot done");
 	}
 #else
